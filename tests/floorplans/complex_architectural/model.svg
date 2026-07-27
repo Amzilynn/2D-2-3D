@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700">
+  <!-- Complex L-shaped plan with corridor, living, kitchen, dining, 3 beds, 2 baths -->
+  <rect width="1000" height="700" fill="#fafafa"/>
+
+  <!-- Outer L-shape shell -->
+  <path class="Wall" fill="#222" fill-rule="evenodd" d="
+    M 40,40 H 660 V 320 H 960 V 660 H 40 Z
+    M 55,55 V 645 H 945 V 335 H 645 V 55 Z"/>
+
+  <!-- Corridor spine -->
+  <rect class="Wall" x="260" y="55" width="12" height="265"/>
+  <rect class="Wall" x="55" y="280" width="205" height="12"/>
+
+  <!-- Kitchen / dining -->
+  <rect class="Wall" x="272" y="180" width="373" height="12"/>
+  <rect class="Wall" x="460" y="55" width="12" height="125"/>
+
+  <!-- Bedroom wing -->
+  <rect class="Wall" x="260" y="335" width="12" height="310"/>
+  <rect class="Wall" x="272" y="450" width="380" height="12"/>
+  <rect class="Wall" x="540" y="335" width="12" height="115"/>
+  <rect class="Wall" x="650" y="335" width="12" height="310"/>
+  <rect class="Wall" x="662" y="500" width="283" height="12"/>
+
+  <!-- Baths -->
+  <rect class="Wall" x="780" y="335" width="12" height="165"/>
+  <rect class="Wall" x="792" y="488" width="153" height="12"/>
+
+  <!-- Doors -->
+  <rect class="Door" x="100" y="645" width="60" height="15"/>
+  <rect class="Door" x="260" y="100" width="12" height="45"/>
+  <rect class="Door" x="320" y="180" width="50" height="12"/>
+  <rect class="Door" x="500" y="180" width="45" height="12"/>
+  <rect class="Door" x="260" y="380" width="12" height="45"/>
+  <rect class="Door" x="540" y="360" width="12" height="40"/>
+  <rect class="Door" x="650" y="380" width="12" height="45"/>
+  <rect class="Door" x="780" y="360" width="12" height="40"/>
+  <rect class="Door" x="700" y="500" width="45" height="12"/>
+
+  <!-- Windows -->
+  <rect class="Window" x="100" y="40" width="90" height="15"/>
+  <rect class="Window" x="320" y="40" width="80" height="15"/>
+  <rect class="Window" x="520" y="40" width="80" height="15"/>
+  <rect class="Window" x="645" y="120" width="15" height="50"/>
+  <rect class="Window" x="945" y="400" width="15" height="60"/>
+  <rect class="Window" x="945" y="560" width="15" height="50"/>
+  <rect class="Window" x="350" y="645" width="100" height="15"/>
+  <rect class="Window" x="750" y="645" width="90" height="15"/>
+</svg>

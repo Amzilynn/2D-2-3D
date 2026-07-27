@@ -1,0 +1,41 @@
+{
+  "structural": {
+    "walls": 9,
+    "doors": 9,
+    "windows": 8,
+    "furniture": 0
+  },
+  "rooms": {
+    "count": 0,
+    "types": [],
+    "confidences": [],
+    "mean_confidence": 0.0
+  },
+  "geometry": {
+    "wall_areas_px": [
+      1520.0,
+      960.0,
+      787.5,
+      497.0,
+      2683.5,
+      583.5,
+      600.0,
+      640.0,
+      3654.0
+    ],
+    "room_areas_px": [],
+    "invalid_wall_polygons": 0,
+    "invalid_room_polygons": 0,
+    "total_wall_area_px": 11925.5,
+    "total_room_area_px": 0.0
+  },
+  "refinement": {
+    "rooms_before": 0,
+    "rooms_after": 0,
+    "area_before_px": [],
+    "area_after_px": [],
+    "mean_area_delta_px": 0.0
+  },
+  "case": "complex_architectural",
+  "input": "tests\\floorplans\\complex_architectural\\model.svg"
+}

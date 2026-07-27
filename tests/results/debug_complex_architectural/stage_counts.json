@@ -1,0 +1,26 @@
+{
+  "predicted": {
+    "floor": 240187,
+    "wall": 21957,
+    "door": 0,
+    "window": 0
+  },
+  "cleaned": {
+    "floor": 240187,
+    "wall": 21957,
+    "door": 0,
+    "window": 0
+  },
+  "final": {
+    "floor": 242787,
+    "wall": 13290,
+    "door": 2256,
+    "window": 3811
+  },
+  "polygons": {
+    "wall": 9,
+    "door": 9,
+    "window": 8,
+    "furniture": 0
+  }
+}

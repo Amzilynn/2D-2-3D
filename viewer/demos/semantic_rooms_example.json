@@ -1,0 +1,42 @@
+{
+  "canvas_size": [512, 512],
+  "content_rect": [0, 0, 512, 512],
+  "polygons": {
+    "wall": [],
+    "door": [],
+    "window": [],
+    "furniture": []
+  },
+  "rooms": [
+    {
+      "type": "bedroom",
+      "polygon": {
+        "outer": [[60.0, 60.0], [220.0, 60.0], [220.0, 220.0], [60.0, 220.0]],
+        "holes": []
+      },
+      "label_anchor": [140.0, 140.0],
+      "confidence": 0.92
+    },
+    {
+      "type": "kitchen",
+      "polygon": {
+        "outer": [[260.0, 80.0], [420.0, 80.0], [420.0, 230.0], [260.0, 230.0]],
+        "holes": []
+      },
+      "label_anchor": [340.0, 155.0],
+      "confidence": 0.88
+    },
+    {
+      "type": "living room",
+      "polygon": {
+        "outer": [[70.0, 270.0], [440.0, 270.0], [440.0, 470.0], [70.0, 470.0]],
+        "holes": []
+      },
+      "label_anchor": [255.0, 370.0],
+      "confidence": 0.84
+    }
+  ],
+  "objects": [],
+  "input_image_b64": null
+}
+

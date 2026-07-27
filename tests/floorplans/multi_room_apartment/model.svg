@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <!-- Multi-room: living, kitchen, 2 bedrooms, bath -->
+  <rect width="800" height="500" fill="#fafafa"/>
+
+  <!-- Outer shell -->
+  <path class="Wall" fill="#222" fill-rule="evenodd" d="
+    M 40,40 H 760 V 460 H 40 Z
+    M 55,55 V 445 H 745 V 55 Z"/>
+
+  <!-- Vertical divider living | bedrooms -->
+  <rect class="Wall" x="390" y="55" width="14" height="390"/>
+  <!-- Kitchen | living -->
+  <rect class="Wall" x="55" y="220" width="335" height="12"/>
+  <!-- Bedroom | bedroom -->
+  <rect class="Wall" x="404" y="250" width="341" height="12"/>
+  <!-- Bath pocket -->
+  <rect class="Wall" x="600" y="55" width="12" height="195"/>
+  <rect class="Wall" x="612" y="238" width="133" height="12"/>
+
+  <!-- Doors -->
+  <rect class="Door" x="100" y="445" width="55" height="15"/>
+  <rect class="Door" x="390" y="120" width="14" height="45"/>
+  <rect class="Door" x="390" y="300" width="14" height="45"/>
+  <rect class="Door" x="200" y="220" width="45" height="12"/>
+  <rect class="Door" x="600" y="100" width="12" height="40"/>
+
+  <!-- Windows -->
+  <rect class="Window" x="140" y="40" width="100" height="15"/>
+  <rect class="Window" x="280" y="40" width="70" height="15"/>
+  <rect class="Window" x="480" y="40" width="80" height="15"/>
+  <rect class="Window" x="745" y="120" width="15" height="60"/>
+  <rect class="Window" x="745" y="320" width="15" height="70"/>
+  <rect class="Window" x="500" y="445" width="90" height="15"/>
+</svg>

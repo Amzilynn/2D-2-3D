@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400">
+  <!-- Simple studio: living + kitchenette + bath -->
+  <rect width="600" height="400" fill="#fafafa"/>
+
+  <!-- Outer shell -->
+  <path class="Wall" fill="#222" fill-rule="evenodd" d="
+    M 40,40 H 560 V 360 H 40 Z
+    M 55,55 V 345 H 545 V 55 Z"/>
+
+  <!-- Bath partition -->
+  <rect class="Wall" x="380" y="55" width="12" height="160"/>
+  <rect class="Wall" x="392" y="203" width="153" height="12"/>
+
+  <!-- Doors -->
+  <rect class="Door" x="80" y="345" width="50" height="15"/>
+  <rect class="Door" x="380" y="80" width="12" height="40"/>
+
+  <!-- Windows -->
+  <rect class="Window" x="180" y="40" width="90" height="15"/>
+  <rect class="Window" x="545" y="100" width="15" height="50"/>
+  <rect class="Window" x="545" y="250" width="15" height="50"/>
+</svg>

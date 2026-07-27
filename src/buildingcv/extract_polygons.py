@@ -38,6 +38,8 @@ from .data import IMAGENET_MEAN, IMAGENET_STD, _read_svg_dims  # type: ignore[at
 from .labels import CLASS_COLORS, CLASS_NAMES, CLASS_TO_ID, FLOOR_ID
 from .model import build_model
 from .svg_render import render_input_png
+from .svg_to_mask import svg_to_mask
+from .semantic_schema import Object, Polygon, Room
 
 # Classes we extract geometry for. `floor` is implicit — it's the negative
 # space, the viewer renders it as a single ground plane and doesn't need
@@ -58,15 +60,14 @@ APPROX_EPSILON_PX: float = 1.5
 MIN_POLYGON_AREA_PX: float = 30.0
 
 
-class Polygon(TypedDict):
-    outer: list[list[float]]
-    holes: list[list[list[float]]]
-
-
 class ExtractionResult(TypedDict):
     canvas_size: list[int]            # [W, H]
     content_rect: list[int]           # [left, top, inner_w, inner_h] for letterboxed renders
     polygons: dict[str, list[Polygon]]
+    # Phase 1 (schema only): semantic room/object models aren't wired in yet,
+    # so these are optional empty arrays.
+    rooms: list[Room]
+    objects: list[Object]
 
 
 def _approx(contour: np.ndarray) -> list[list[float]]:
@@ -171,6 +172,74 @@ def _resolve_device(name: str) -> torch.device:
     return torch.device("cpu")
 
 
+def _draw_contour_overlay(base_rgb: Image.Image, mask: np.ndarray) -> Image.Image:
+    """Draw per-class contours on top of an RGB image for debug dumps."""
+    out = base_rgb.convert("RGB").copy()
+    arr = np.array(out)
+    for cls in EXTRACT_CLASSES:
+        binary = (mask == CLASS_TO_ID[cls]).astype(np.uint8)
+        if binary.sum() == 0:
+            continue
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (CLOSING_KERNEL_PX, CLOSING_KERNEL_PX))
+        closed = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+        contours, _ = cv2.findContours(closed, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+        color = CLASS_COLORS[cls]
+        cv2.drawContours(arr, contours, -1, color, 1)
+    return Image.fromarray(arr)
+
+
+def dump_extraction_stages(
+    out_dir: Path,
+    rendered_rgb: Image.Image,
+    predicted_mask: np.ndarray,
+    cleaned_mask: np.ndarray,
+    final_mask: np.ndarray,
+    polygons: dict[str, list[Polygon]],
+) -> None:
+    """Write intermediate debug images for every extraction stage."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rendered_rgb.save(out_dir / "01_rendered_input.png")
+    _colorize_mask(predicted_mask).save(out_dir / "02_predicted_mask.png")
+    _colorize_mask(cleaned_mask).save(out_dir / "03_cleaned_mask.png")
+    _colorize_mask(final_mask).save(out_dir / "04_final_mask.png")
+    _draw_contour_overlay(rendered_rgb, final_mask).save(out_dir / "05_extracted_contours.png")
+    overlay = _draw_polygons(rendered_rgb, {k: polygons.get(k, []) for k in EXTRACT_CLASSES})
+    overlay.save(out_dir / "06_polygons_overlay.png")
+    (out_dir / "stage_counts.json").write_text(
+        json.dumps(
+            {
+                "predicted": {n: int((predicted_mask == i).sum()) for i, n in enumerate(CLASS_NAMES)},
+                "cleaned": {n: int((cleaned_mask == i).sum()) for i, n in enumerate(CLASS_NAMES)},
+                "final": {n: int((final_mask == i).sum()) for i, n in enumerate(CLASS_NAMES)},
+                "polygons": {k: len(v) for k, v in polygons.items()},
+            },
+            indent=2,
+        )
+    )
+
+
+def _should_fallback_to_svg(mask: np.ndarray, svg_mask: np.ndarray) -> bool:
+    """Prefer SVG mask when the model clearly lost structural openings."""
+    wall_id = CLASS_TO_ID["wall"]
+    door_id = CLASS_TO_ID["door"]
+    window_id = CLASS_TO_ID["window"]
+
+    model_walls = int(np.count_nonzero(mask == wall_id))
+    if mask.sum() == 0 or model_walls < 10:
+        return np.count_nonzero(svg_mask == wall_id) >= 10
+
+    # Domain-shift case: walls exist but doors/windows vanished while the SVG
+    # still encodes openings. Without this gate, synthetic/non-CubiCasa plans
+    # keep a wall-only model mask and never recover door/window polygons.
+    model_openings = int(np.count_nonzero(mask == door_id) + np.count_nonzero(mask == window_id))
+    svg_openings = int(
+        np.count_nonzero(svg_mask == door_id) + np.count_nonzero(svg_mask == window_id)
+    )
+    if model_openings == 0 and svg_openings >= 10:
+        return True
+    return False
+
+
 class PolygonExtractor:
     """Stateful wrapper: load the model once, then extract for many SVGs.
 
@@ -205,22 +274,55 @@ class PolygonExtractor:
         mask = logits.argmax(dim=1).squeeze(0).to("cpu", torch.uint8).numpy()
         return mask, rect
 
-    def extract(self, svg_path: Path) -> ExtractionResult:
-        mask, (left, top, inner_w, inner_h) = self.predict_mask(svg_path)
+    def extract(self, svg_path: Path, debug_dir: Path | None = None) -> ExtractionResult:
+        image_t, rect = _render_input_tensor(
+            svg_path, self.image_size, self.letterbox, self.normalize
+        )
+        with torch.no_grad():
+            logits = self.model(image_t.unsqueeze(0).to(self.device))
+        predicted_mask = logits.argmax(dim=1).squeeze(0).to("cpu", torch.uint8).numpy()
+        left, top, inner_w, inner_h = rect
 
         # Zero out letterbox padding so we don't extract polygons from the
         # gray border. The model is well-behaved here in practice (predicts
         # floor) but the closing op can otherwise pull stray pixels outward.
-        if (inner_h, inner_w) != mask.shape:
-            cleaned = np.full_like(mask, FLOOR_ID)
-            cleaned[top:top + inner_h, left:left + inner_w] = mask[top:top + inner_h, left:left + inner_w]
-            mask = cleaned
+        cleaned_mask = predicted_mask
+        if (inner_h, inner_w) != predicted_mask.shape:
+            cleaned_mask = np.full_like(predicted_mask, FLOOR_ID)
+            cleaned_mask[top:top + inner_h, left:left + inner_w] = predicted_mask[
+                top:top + inner_h, left:left + inner_w
+            ]
 
-        H, W = mask.shape
+        final_mask = cleaned_mask
+        # Fall back to SVG-derived labels when the model loses structure or
+        # openings (common on non-CubiCasa / synthetic SVGs).
+        try:
+            svg_mask = svg_to_mask(svg_path, size=(predicted_mask.shape[1], predicted_mask.shape[0]))
+            if _should_fallback_to_svg(cleaned_mask, svg_mask):
+                final_mask = svg_mask
+        except Exception:
+            pass
+
+        H, W = final_mask.shape
+        polygons = mask_to_polygons(final_mask)
+        polygons.setdefault("furniture", [])
+
+        if debug_dir is not None:
+            dump_extraction_stages(
+                Path(debug_dir),
+                _denormalize_to_pil(image_t, self.normalize),
+                predicted_mask,
+                cleaned_mask,
+                final_mask,
+                polygons,
+            )
+
         return {
             "canvas_size": [W, H],
             "content_rect": [left, top, inner_w, inner_h],
-            "polygons": mask_to_polygons(mask),
+            "polygons": polygons,
+            "rooms": [],
+            "objects": [],
         }
 
 
@@ -328,34 +430,33 @@ def main() -> None:
         default=None,
         help="if set, also write a 3-panel debug PNG (input | mask | polygons)",
     )
+    p.add_argument(
+        "--debug-dir",
+        type=Path,
+        default=None,
+        help="if set, write per-stage debug images (rendered/mask/contours)",
+    )
     p.add_argument("--device", default="auto")
     args = p.parse_args()
 
     extractor = PolygonExtractor(args.run_dir, ckpt=args.ckpt, device=args.device)
     print(f"device: {extractor.device}   epoch: {extractor.epoch}")
 
-    if args.debug_png is None:
-        result = extractor.extract(args.svg)
-    else:
-        # Debug path: keep the input tensor + raw mask around so we can render
-        # the overlay. Reuses the same predict_mask call as the JSON path.
-        image_t, rect = _render_input_tensor(
+    result = extractor.extract(args.svg, debug_dir=args.debug_dir)
+    if args.debug_png is not None:
+        image_t, _ = _render_input_tensor(
             args.svg, extractor.image_size, extractor.letterbox, extractor.normalize
         )
-        with torch.no_grad():
-            logits = extractor.model(image_t.unsqueeze(0).to(extractor.device))
-        mask = logits.argmax(dim=1).squeeze(0).to("cpu", torch.uint8).numpy()
+        # Rebuild a mask for the panel from the final polygons' source isn't
+        # stored; re-run predict + same cleaning for the classic triptych.
+        mask, rect = extractor.predict_mask(args.svg)
         left, top, inner_w, inner_h = rect
         if (inner_h, inner_w) != mask.shape:
             cleaned = np.full_like(mask, FLOOR_ID)
-            cleaned[top:top + inner_h, left:left + inner_w] = mask[top:top + inner_h, left:left + inner_w]
+            cleaned[top:top + inner_h, left:left + inner_w] = mask[
+                top:top + inner_h, left:left + inner_w
+            ]
             mask = cleaned
-        H, W = mask.shape
-        result: ExtractionResult = {
-            "canvas_size": [W, H],
-            "content_rect": list(rect),
-            "polygons": mask_to_polygons(mask),
-        }
         panel = render_debug_panel(image_t, mask, result, extractor.normalize)
         panel.save(args.debug_png)
         print(f"wrote {args.debug_png}")

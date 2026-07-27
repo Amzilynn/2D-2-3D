@@ -8,14 +8,17 @@ import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-import cairosvg
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from buildingcv.extract_polygons import PolygonExtractor
-from buildingcv.svg_render import filtered_svg_bytes
+from buildingcv.room_detector import detect_rooms_from_png
+from buildingcv.room_refinement import refine_rooms
+from buildingcv.svg_render import filtered_svg_bytes, svg2png
+from buildingcv.furniture import detect_furniture_from_png
+from buildingcv.sam_integration import generate_sam_polygons
 
 # Default location for downloaded weights — clean clone-and-go path. Local
 # training writes `.pt` to `runs/<version>/<timestamp>/`; export with
@@ -101,8 +104,13 @@ def _attach_input_image(svg_path: Path, result: dict) -> dict:
     floor texture under the rising 3D geometry — same content the model saw,
     so what the user sees on the floor is exactly what the polygons came from.
     """
+    # Phase 1 schema: rooms/objects are optional semantic outputs.
+    # No semantic models are wired in yet, so default to empty arrays.
+    result.setdefault("rooms", [])
+    result.setdefault("objects", [])
+
     _, _, inner_w, inner_h = result["content_rect"]
-    png = cairosvg.svg2png(
+    png = svg2png(
         bytestring=filtered_svg_bytes(svg_path),
         output_width=inner_w,
         output_height=inner_h,
@@ -110,6 +118,13 @@ def _attach_input_image(svg_path: Path, result: dict) -> dict:
         # over a tinted floor plane, so transparency lets the floor color
         # show through where the SVG has no ink.
     )
+    try:
+        rooms = detect_rooms_from_png(png, result["content_rect"])
+        walls = result.get("polygons", {}).get("wall", [])
+        canvas_size = result.get("canvas_size", [inner_w, inner_h])
+        result["rooms"] = refine_rooms(rooms, walls, canvas_size)
+    except Exception:
+        result["rooms"] = []
     result["input_image_b64"] = base64.b64encode(png).decode("ascii")
     return result
 
@@ -154,7 +169,40 @@ async def extract(svg: UploadFile = File(...)) -> dict:
         tmp_path = Path(tmp.name)
     try:
         try:
+            # Run extractor to get structural polygons
             result = extractor.extract(tmp_path)
+            # Additionally produce a furniture polygon list via heuristics
+            try:
+                # Render input image at content size so detections align.
+                left, top, inner_w, inner_h = result["content_rect"]
+                raw_png = svg2png(bytestring=raw, output_width=inner_w, output_height=inner_h)
+                png = svg2png(bytestring=filtered_svg_bytes(tmp_path), output_width=inner_w, output_height=inner_h)
+                # Get raw mask to filter overlaps (predict_mask returns mask in HxW)
+                mask, rect = extractor.predict_mask(tmp_path)
+                wall_mask = (mask == 1).astype('uint8') if mask is not None else None
+
+                # Prefer SAM if a checkpoint is provided via env var, otherwise
+                # fall back to the fast heuristic detector.
+                sam_ckpt = os.environ.get("BUILDINGCV_SAM_CKPT", None)
+                furn_polys = None
+                if sam_ckpt:
+                    try:
+                        furn_polys = generate_sam_polygons(raw_png, checkpoint_path=sam_ckpt, device=str(extractor.device))
+                    except Exception:
+                        furn_polys = None
+
+                if furn_polys is None:
+                    furn_polys = detect_furniture_from_png(raw_png, wall_mask=wall_mask)
+
+                if furn_polys:
+                    result.setdefault("polygons", {})
+                    result["polygons"]["furniture"] = [
+                        {"outer": p, "holes": []} for p in furn_polys
+                    ]
+            except Exception:
+                # Non-fatal: if furniture detection fails, continue returning
+                # the structural result so the app still functions.
+                pass
         except Exception as e:
             # Bad SVGs (cairosvg parse failures, NaN transforms in CubiCasa)
             # land here. Return 422 so the viewer can show "this file

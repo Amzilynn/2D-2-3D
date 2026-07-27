@@ -1,0 +1,39 @@
+{
+  "structural": {
+    "walls": 7,
+    "doors": 5,
+    "windows": 6,
+    "furniture": 0
+  },
+  "rooms": {
+    "count": 0,
+    "types": [],
+    "confidences": [],
+    "mean_confidence": 0.0
+  },
+  "geometry": {
+    "wall_areas_px": [
+      3285.0,
+      2152.0,
+      1269.0,
+      2532.0,
+      1215.0,
+      360.0,
+      5165.5
+    ],
+    "room_areas_px": [],
+    "invalid_wall_polygons": 0,
+    "invalid_room_polygons": 0,
+    "total_wall_area_px": 15978.5,
+    "total_room_area_px": 0.0
+  },
+  "refinement": {
+    "rooms_before": 0,
+    "rooms_after": 0,
+    "area_before_px": [],
+    "area_after_px": [],
+    "mean_area_delta_px": 0.0
+  },
+  "case": "multi_room_apartment",
+  "input": "tests\\floorplans\\multi_room_apartment\\model.svg"
+}

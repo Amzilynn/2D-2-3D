@@ -30,9 +30,35 @@ def _read_svg_dims(svg_path: Path) -> tuple[float, float]:
     """Return the SVG's native (width, height) in user units."""
     root = ET.parse(svg_path).getroot()
     viewbox = (root.get("viewBox") or "").split()
-    w = float(root.get("width") or (viewbox[2] if len(viewbox) == 4 else 0))
-    h = float(root.get("height") or (viewbox[3] if len(viewbox) == 4 else 0))
-    if w <= 0 or h <= 0:
+    
+    w_str = root.get("width")
+    h_str = root.get("height")
+    
+    w = None
+    if w_str and not w_str.endswith("%"):
+        try:
+            w = float(w_str)
+        except ValueError:
+            pass
+            
+    h = None
+    if h_str and not h_str.endswith("%"):
+        try:
+            h = float(h_str)
+        except ValueError:
+            pass
+            
+    if w is None or h is None:
+        if len(viewbox) == 4:
+            try:
+                w_vb = float(viewbox[2])
+                h_vb = float(viewbox[3])
+                w = w if w is not None else w_vb
+                h = h if h is not None else h_vb
+            except ValueError:
+                pass
+
+    if w is None or h is None or w <= 0 or h <= 0:
         raise ValueError(f"could not determine SVG size for {svg_path}")
     return w, h
 

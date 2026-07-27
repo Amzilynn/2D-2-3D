@@ -16,10 +16,8 @@ import json
 import os
 from pathlib import Path
 
-import cairosvg
-
 from buildingcv.extract_polygons import PolygonExtractor
-from buildingcv.svg_render import filtered_svg_bytes
+from buildingcv.svg_render import filtered_svg_bytes, svg2png
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_RUN_DIR = REPO_ROOT / "weights"
@@ -36,8 +34,13 @@ SAMPLES: dict[str, str] = {
 
 
 def attach_input_image(svg_path: Path, result: dict) -> dict:
+    # Phase 1 schema: rooms/objects are optional semantic outputs.
+    # No semantic models are wired in yet, so default to empty arrays.
+    result.setdefault("rooms", [])
+    result.setdefault("objects", [])
+
     _, _, inner_w, inner_h = result["content_rect"]
-    png = cairosvg.svg2png(
+    png = svg2png(
         bytestring=filtered_svg_bytes(svg_path),
         output_width=inner_w,
         output_height=inner_h,

@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  <defs>
+    <style>
+      .wall { fill: #2c3e50; stroke: #1a252f; stroke-width: 2; }
+      .inner-wall { fill: #34495e; stroke: #1a252f; stroke-width: 2; }
+      .door-arc { fill: none; stroke: #e74c3c; stroke-width: 1.5; stroke-dasharray: 4,3; }
+      .door-panel { stroke: #e74c3c; stroke-width: 2.5; }
+      .window { fill: #ecf0f1; stroke: #2980b9; stroke-width: 2; }
+      .room-label { font-family: system-ui, -apple-system, sans-serif; font-size: 16px; font-weight: bold; fill: #2c3e50; text-anchor: middle; }
+      .dim-text { font-family: system-ui, -apple-system, sans-serif; font-size: 12px; fill: #7f8c8d; text-anchor: middle; }
+      .dim-line { stroke: #95a5a6; stroke-width: 1; marker-end: url(#arrow); marker-start: url(#arrow); }
+      .furniture { fill: #f8f9fa; stroke: #bdc3c7; stroke-width: 1.5; rx: 4; }
+    </style>
+    
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#95a5a6" />
+    </marker>
+  </defs>
+
+  <!-- Background Grid Effect -->
+  <rect width="800" height="500" fill="#fdfdfd" />
+
+  <!-- ================= OUTER WALLS ================= -->
+  <!-- Main Shell (12m x 6m scaled: 600px x 300px) -->
+  <path class="wall" fill-rule="evenodd" d="
+    M 100,100 H 700 V 400 H 100 Z 
+    M 115,115 V 385 H 685 V 115 Z" />
+
+  <!-- ================= INNER WALLS ================= -->
+  <!-- Divider Wall: Main Living / Bedroom (at X=450) -->
+  <rect class="inner-wall" x="442.5" y="115" width="15" height="270" />
+  
+  <!-- Divider Wall: Bedroom / Bathroom (at Y=260 in right section) -->
+  <rect class="inner-wall" x="457.5" y="252.5" width="227.5" height="15" />
+
+  <!-- ================= WINDOWS (Cut into outer walls) ================= -->
+  <!-- Living Room Front Window -->
+  <rect class="window" x="200" y="92.5" width="100" height="25" />
+  <!-- Living Room Back Window -->
+  <rect class="window" x="200" y="382.5" width="100" height="25" />
+  <!-- Bedroom Side Window -->
+  <rect class="window" x="682.5" y="160" width="25" height="60" />
+  <!-- Bathroom Side Window -->
+  <rect class="window" x="682.5" y="310" width="25" height="40" />
+
+  <!-- ================= DOORS & SWINGS ================= -->
+  <!-- Main Entrance Door (Bottom Left) -->
+  <g id="main-door">
+    <rect class="window" x="120" y="382.5" width="60" height="25" fill="#ffffff" />
+    <line class="door-panel" x1="120" y1="385" x2="120" y2="325" />
+    <path class="door-arc" d="M 120,325 A 60,60 0 0,1 180,385" />
+  </g>
+
+  <!-- Bedroom Door (Top Right Divider) -->
+  <g id="bedroom-door">
+    <rect class="window" x="442.5" y="130" width="15" height="50" fill="#ffffff" />
+    <line class="door-panel" x1="457.5" y1="130" x2="507.5" y2="130" />
+    <path class="door-arc" d="M 507.5,130 A 50,50 0 0,1 457.5,180" />
+  </g>
+
+  <!-- Bathroom Door -->
+  <g id="bath-door">
+    <rect class="window" x="520" y="252.5" width="45" height="15" fill="#ffffff" />
+    <line class="door-panel" x1="520" y1="267.5" x2="520" y2="312.5" />
+    <path class="door-arc" d="M 520,312.5 A 45,45 0 0,1 565,267.5" />
+  </g>
+
+  <!-- ================= SIMPLE FURNITURE LAYOUT ================= -->
+  <!-- Kitchen Counter / Sink -->
+  <rect class="furniture" x="120" y="120" width="140" height="40" />
+  <circle cx="230" cy="140" r="12" fill="none" stroke="#bdc3c7" stroke-width="1.5" />
+  
+  <!-- Sofa -->
+  <rect class="furniture" x="320" y="200" width="45" height="110" />
+  
+  <!-- Bed -->
+  <rect class="furniture" x="575" y="120" width="100" height="110" />
+  <rect class="furniture" x="585" y="125" width="35" height="25" />
+  <rect class="furniture" x="630" y="125" width="35" height="25" />
+
+  <!-- Bathroom Fixtures (Shower & Toilet) -->
+  <rect class="furniture" x="625" y="325" width="55" height="55" /> <!-- Shower -->
+  <circle cx="485" cy="355" r="15" class="furniture" /> <!-- Toilet -->
+
+  <!-- ================= LABELS & ROOM NAMES ================= -->
+  <text x="270" y="260" class="room-label">LIVING &amp; KITCHEN</text>
+  <text x="270" y="280" class="dim-text">6.5m × 5.4m</text>
+
+  <text x="565" y="185" class="room-label">BEDROOM</text>
+  <text x="565" y="205" class="dim-text">4.3m × 2.6m</text>
+
+  <text x="565" y="320" class="room-label">BATH</text>
+  <text x="565" y="338" class="dim-text">4.3m × 2.4m</text>
+
+  <!-- ================= OVERALL DIMENSION LINES ================= -->
+  <!-- Top Horizontal Dimension -->
+  <line class="dim-line" x1="100" y1="65" x2="700" y2="65" />
+  <text x="400" y="55" class="dim-text">12.00 m</text>
+
+  <!-- Left Vertical Dimension -->
+  <line class="dim-line" x1="65" y1="100" x2="65" y2="400" />
+  <text x="50" y="255" class="dim-text" transform="rotate(-90 50 255)">6.00 m</text>
+</svg>
